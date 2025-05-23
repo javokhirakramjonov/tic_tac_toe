@@ -1,6 +1,7 @@
 import 'dart:math';
 
 import 'package:flutter/material.dart';
+import 'package:lottie/lottie.dart';
 
 class Game extends StatefulWidget {
   const Game({super.key});
@@ -10,10 +11,62 @@ class Game extends StatefulWidget {
 }
 
 class _GameState extends State<Game> {
-  Player _currentPlayer = Player.X;
+  Player? _currentPlayer;
   final List<Player?> _board = List.filled(9, null);
   Player? winner;
   WinType? _winType;
+
+  @override
+  void initState() {
+    super.initState();
+    WidgetsBinding.instance.addPostFrameCallback((_) {
+      _buildInitialPlayerSelectorDialog(context);
+    });
+  }
+
+  void _buildInitialPlayerSelectorDialog(BuildContext context) {
+    showDialog(
+      barrierDismissible: false,
+      context: context,
+      builder: (context) {
+        return SimpleDialog(
+          title: const Text('Select Player'),
+          children: [
+            Padding(
+              padding: const EdgeInsets.all(8.0),
+              child: Row(
+                spacing: 24,
+                children: [
+                  Expanded(
+                    child: ElevatedButton(
+                      onPressed: () {
+                        setState(() {
+                          _currentPlayer = Player.X;
+                        });
+                        Navigator.of(context).pop();
+                      },
+                      child: Text('X'),
+                    ),
+                  ),
+                  Expanded(
+                    child: ElevatedButton(
+                      onPressed: () {
+                        setState(() {
+                          _currentPlayer = Player.O;
+                        });
+                        Navigator.of(context).pop();
+                      },
+                      child: Text('O'),
+                    ),
+                  ),
+                ],
+              ),
+            ),
+          ],
+        );
+      },
+    );
+  }
 
   @override
   Widget build(BuildContext context) {
@@ -26,18 +79,13 @@ class _GameState extends State<Game> {
               mainAxisSize: MainAxisSize.min,
               children: [
                 Text(
-                  'Current Player: ${_currentPlayer.name}',
+                  _currentPlayer?.name ?? 'Select Player',
                   style: const TextStyle(fontSize: 24),
                 ),
-                if (winner != null)
-                  Text(
-                    'Winner: ${winner!.name}',
-                    style: const TextStyle(fontSize: 24),
-                  ),
                 const SizedBox(height: 48),
                 _buildBoard(),
                 const SizedBox(height: 48),
-                _buildRetryButton(),
+                _buildRetryButton(context),
               ],
             ),
           ),
@@ -276,15 +324,17 @@ class _GameState extends State<Game> {
     }
   }
 
-  Widget _buildRetryButton() {
+  Widget _buildRetryButton(BuildContext context) {
     return ElevatedButton(
       onPressed: () {
         setState(() {
           _board.fillRange(0, _board.length, null);
           winner = null;
-          _currentPlayer = Player.X;
+          _currentPlayer = null;
           _winType = null;
         });
+
+        _buildInitialPlayerSelectorDialog(context);
       },
       child: const Text('Retry'),
     );
@@ -298,6 +348,47 @@ class _GameState extends State<Game> {
     setState(() {
       winner = player;
     });
+
+    showDialog(
+      context: context,
+      builder: (context) {
+        return SimpleDialog(
+          title: Text('${player.name} wins!'),
+          children: [
+            Lottie.asset(
+              height: 100,
+              width: 100,
+              'assets/animations/congratulations.json',
+            ),
+            Row(
+              children: [
+                TextButton(
+                  onPressed: () {
+                    Navigator.of(context).pop();
+                  },
+                  child: const Text('OK'),
+                ),
+                TextButton(
+                  onPressed: () {
+                    setState(() {
+                      _board.fillRange(0, _board.length, null);
+                      winner = null;
+                      _currentPlayer = null;
+                      _winType = null;
+                    });
+
+                    Navigator.of(context).pop();
+
+                    _buildInitialPlayerSelectorDialog(context);
+                  },
+                  child: const Text('Retry'),
+                ),
+              ],
+            ),
+          ],
+        );
+      },
+    );
   }
 }
 
